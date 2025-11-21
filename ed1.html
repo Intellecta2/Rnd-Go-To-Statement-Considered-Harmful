@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Go To Considered Harmful | Immersive Research</title>
+    
+    <!-- Chosen Palette: "Deep Space & Neon" -->
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Cinzel', 'serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        space: {
+                            950: '#020617',
+                            900: '#0f172a',
+                            800: '#1e293b',
+                        },
+                        neon: {
+                            blue: '#22d3ee',
+                            purple: '#8b5cf6',
+                            red: '#f43f5e',
+                            green: '#34d399'
+                        }
+                    },
+                    animation: {
+                        'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #020617; color: #e2e8f0; overflow-x: hidden; transition: background-color 1s ease; }
+        
+        /* Background State Classes */
+        body.state-chaos { background-color: #1a0505; } /* Subtle Red Tint */
+        body.state-order { background-color: #020617; } /* Deep Blue */
+
+        /* Glassmorphism */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.4);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+            transition: border-color 0.5s ease, box-shadow 0.5s ease;
+        }
+
+        .glass-nav {
+            background: rgba(2, 6, 23, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Text Gradients */
+        .text-gradient-danger {
+            background: linear-gradient(to right, #f43f5e, #fb923c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Utils */
+        .reveal-section { opacity: 0; transform: translateY(40px); transition: all 1s cubic-bezier(0.16, 1, 0.3, 1); }
+        .reveal-active { opacity: 1; transform: translateY(0); }
+        
+        ::-webkit-scrollbar { width: 6px; background: #020617; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+
+        /* IDE Styles */
+        .ide-window { border-radius: 8px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.5); font-size: 13px; }
+        .ide-header { background: #0f172a; padding: 10px 16px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #1e293b; }
+        .ide-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .ide-content { background: #020617; padding: 20px; font-family: 'JetBrains Mono', monospace; line-height: 1.6; }
+    </style>
+</head>
+<body class="antialiased selection:bg-neon-blue selection:text-space-950 state-order" id="main-body">
+
+    <!-- Global Ambient Glow (Changes color based on state) -->
+    <div id="ambient-glow" class="fixed top-0 left-0 w-full h-full pointer-events-none z-0 opacity-30 transition-all duration-1000 bg-gradient-to-b from-transparent to-transparent"></div>
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full z-50 glass-nav transition-all duration-300" id="navbar">
+        <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div id="brand-mark" class="w-2 h-8 bg-gradient-to-b from-neon-blue to-neon-purple rounded-full transition-all duration-500"></div>
+                <span class="font-serif text-xl tracking-wider text-slate-100">RaSor <span class="text-slate-500">//</span> Research</span>
+            </div>
+            
+            <div class="hidden md:flex items-center gap-8 text-sm font-medium tracking-wide text-slate-400">
+                <a href="#hero" class="hover:text-neon-blue transition-colors">Analysis</a>
+                <a href="#chaos-demo" class="hover:text-neon-blue transition-colors">Simulate</a>
+                <a href="#lab" class="hover:text-neon-blue transition-colors">Code Lab</a>
+            </div>
+
+            <a href="#lab" class="group relative px-6 py-2 overflow-hidden rounded-full bg-slate-800 text-white shadow-lg ring-1 ring-white/10 hover:ring-neon-blue transition-all">
+                <span class="absolute inset-0 w-full h-full bg-gradient-to-r from-neon-blue to-neon-purple opacity-0 group-hover:opacity-20 transition-opacity"></span>
+                <span class="relative text-xs font-bold uppercase tracking-widest">Interactive Demo</span>
+            </a>
+        </div>
+    </nav>
+
+    <main class="relative z-10">
+        
+        <!-- Hero Section -->
+        <section id="hero" class="min-h-screen flex flex-col justify-center items-center px-6 pt-20 relative overflow-hidden">
+            <!-- Dynamic Backlight -->
+            <div id="hero-light" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-neon-purple rounded-full mix-blend-screen filter blur-[120px] opacity-20 animate-pulse transition-colors duration-1000"></div>
+            
+            <div class="text-center max-w-5xl mx-auto relative z-10">
+                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900/50 border border-slate-700/50 backdrop-blur-md mb-8">
+                    <span id="status-dot" class="w-2 h-2 rounded-full bg-neon-blue animate-pulse transition-colors"></span>
+                    <span class="text-xs font-mono text-slate-300 uppercase tracking-widest">System Status: <span id="system-text">Stable</span></span>
+                </div>
+                
+                <h1 class="text-6xl md:text-8xl font-serif font-bold leading-tight mb-6">
+                    Go To Statement<br>
+                    <span class="text-gradient-danger">Considered Harmful</span>
+                </h1>
+                
+                <p class="text-xl md:text-2xl text-slate-400 max-w-3xl mx-auto leading-relaxed font-light">
+                    Edsger W. Dijkstra's 1968 manifesto wasn't just about code style. It was a plea for <span class="text-neon-blue font-medium">intellectual manageability</span> in an era of chaos.
+                </p>
+
+                <div class="mt-12">
+                    <button onclick="document.getElementById('chaos-demo').scrollIntoView({behavior:'smooth'})" class="px-8 py-4 bg-slate-100 text-space-950 rounded-full font-bold text-sm uppercase tracking-widest hover:bg-neon-blue hover:scale-105 transition-all shadow-[0_0_20px_rgba(34,211,238,0.3)]">
+                        Enter The Simulation
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- THE VISUALIZATION BOX (Updated) -->
+        <section id="chaos-demo" class="py-32 px-6 relative">
+            <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                
+                <div class="reveal-section">
+                    <h2 class="text-neon-red font-mono text-sm tracking-widest mb-4">// THE PROBLEM</h2>
+                    <h3 class="text-4xl md:text-5xl font-serif font-bold text-white mb-6">The Unbridled Jump</h3>
+                    <div class="prose prose-invert prose-lg text-slate-400">
+                        <p>
+                            When a program uses <code class="text-neon-red bg-slate-900 px-2 py-1 rounded border border-slate-800">GOTO</code>, execution becomes erratic. 
+                        </p>
+                        <p>
+                            <strong class="text-white">Chaos Mode:</strong> Represents "Spaghetti Code". Particles move haphazardly, jumping randomly like a `goto` instruction.
+                        </p>
+                        <p>
+                            <strong class="text-white">Order Mode:</strong> Represents "Structured Programming". Particles move in a calm, uniform grid, representing loops and functions.
+                        </p>
+                    </div>
+                    
+                    <!-- Controls -->
+                    <div class="mt-10 flex gap-4">
+                        <button onclick="triggerChaos()" id="btn-chaos" class="flex-1 py-4 bg-slate-800 border border-slate-700 hover:border-neon-red text-slate-300 rounded-lg text-xs font-bold transition-all uppercase tracking-wider">
+                            Inject Chaos (GOTO)
+                        </button>
+                        <button onclick="triggerOrder()" id="btn-order" class="flex-1 py-4 bg-slate-800 border-neon-blue text-neon-blue shadow-[0_0_15px_rgba(34,211,238,0.2)] rounded-lg text-xs font-bold transition-all uppercase tracking-wider">
+                            Restore Order
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Main Canvas Container -->
+                <div id="viz-box" class="glass-panel rounded-2xl p-1 reveal-section delay-200 relative h-[500px] w-full border-neon-blue shadow-[0_0_30px_rgba(34,211,238,0.1)] overflow-hidden">
+                    <!-- Overlay Info -->
+                    <div class="absolute top-6 left-6 z-20 pointer-events-none">
+                        <div class="text-xs text-slate-500 font-mono mb-1">VISUALIZATION MODE</div>
+                        <div id="viz-status" class="text-2xl font-bold text-neon-blue drop-shadow-[0_0_10px_rgba(34,211,238,0.8)]">STRUCTURED</div>
+                    </div>
+
+                    <!-- The 3D Effect Canvas -->
+                    <canvas id="mainCanvas" class="w-full h-full rounded-xl bg-space-900"></canvas>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- The Gap Chart Section -->
+        <section id="gap" class="py-32 px-6 bg-space-900/30 relative border-y border-slate-800/50">
+            <div class="max-w-5xl mx-auto text-center mb-16 reveal-section">
+                <h2 class="text-neon-blue font-mono text-sm tracking-widest mb-4">// THE COGNITIVE GAP</h2>
+                <h3 class="text-4xl md:text-5xl font-serif font-bold text-white mb-6">Static Text vs. Dynamic Process</h3>
+                <p class="text-slate-400 max-w-2xl mx-auto">
+                    Dijkstra argued that as programs grow, the mental effort required to trace <span class="text-neon-red">unstructured</span> code grows exponentially compared to <span class="text-neon-blue">structured</span> code.
+                </p>
+            </div>
+
+            <div class="max-w-4xl mx-auto h-[400px] glass-panel p-4 rounded-xl reveal-section">
+                <canvas id="gapChart"></canvas>
+            </div>
+        </section>
+
+        <!-- Code Refactoring Lab -->
+        <section id="lab" class="py-32 px-6">
+            <div class="max-w-7xl mx-auto">
+                <div class="text-center mb-16 reveal-section">
+                    <h2 class="text-neon-purple font-mono text-sm tracking-widest mb-4">// REFACTORING LAB</h2>
+                    <h3 class="text-4xl font-serif font-bold text-white">From Mess to Clarity</h3>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    
+                    <!-- Editor 1: Bad Code -->
+                    <div class="ide-window reveal-section delay-100 border border-slate-800 group hover:border-neon-red transition-colors duration-500">
+                        <div class="ide-header">
+                            <div class="ide-dot bg-red-500"></div>
+                            <div class="ide-dot bg-yellow-500"></div>
+                            <div class="ide-dot bg-green-500"></div>
+                            <span class="ml-4 text-slate-500 font-mono text-xs">legacy.c</span>
+                            <span class="ml-auto text-neon-red text-[10px] uppercase border border-neon-red/30 px-2 py-0.5 rounded">Unsafe</span>
+                        </div>
+                        <div class="ide-content text-slate-300">
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">1</span><span><span class="text-neon-purple">int</span> i = 0;</span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">2</span><span><span class="text-yellow-400 font-bold">START:</span></span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">3</span><span>  <span class="text-neon-purple">if</span> (i > 10) <span class="text-neon-red">goto</span> <span class="text-yellow-400">END</span>;</span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">4</span><span>  <span class="text-neon-purple">if</span> (check(i)) <span class="text-neon-red">goto</span> <span class="text-yellow-400">ACTION</span>;</span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">5</span><span>  i++;</span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">6</span><span>  <span class="text-neon-red">goto</span> <span class="text-yellow-400">START</span>;</span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">7</span><span><span class="text-yellow-400 font-bold">ACTION:</span></span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">8</span><span>  process(i);</span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">9</span><span>  <span class="text-neon-red">goto</span> <span class="text-yellow-400">START</span>;</span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">10</span><span><span class="text-yellow-400 font-bold">END:</span></span></div>
+                        </div>
+                    </div>
+
+                    <!-- Editor 2: Good Code -->
+                    <div class="ide-window reveal-section delay-200 border border-slate-800 group hover:border-neon-blue transition-colors duration-500 shadow-[0_0_30px_rgba(34,211,238,0.05)]">
+                        <div class="ide-header">
+                            <div class="ide-dot bg-red-500"></div>
+                            <div class="ide-dot bg-yellow-500"></div>
+                            <div class="ide-dot bg-green-500"></div>
+                            <span class="ml-4 text-slate-500 font-mono text-xs">modern.js</span>
+                            <span class="ml-auto text-neon-blue text-[10px] uppercase border border-neon-blue/30 px-2 py-0.5 rounded">Optimized</span>
+                        </div>
+                        <div class="ide-content text-slate-300">
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">1</span><span><span class="text-slate-500 italic">// Structured flow</span></span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">2</span><span><span class="text-neon-purple">for</span> (<span class="text-neon-purple">let</span> i = 0; i <= 10; i++) {</span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">3</span><span></span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">4</span><span>  <span class="text-neon-purple">if</span> (check(i)) {</span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">5</span><span>    process(i);</span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">6</span><span>  }</span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">7</span><span></span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">8</span><span>}</span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">9</span><span></span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">10</span><span>console.log(<span class="text-neon-green">"Done"</span>);</span></div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="py-12 text-center border-t border-slate-800 bg-space-950 relative z-10">
+        <p class="font-serif text-lg text-slate-500 italic">"Elegance is not <span class="text-white font-bold">an</span> optional luxury but a matter of life and death."</p>
+        <div class="mt-4 text-xs text-slate-700 uppercase tracking-widest font-mono">RaSor Research Group &copy; 2025</div>
+    </footer>
+
+    <script>
+        // --- 1. Reveal Animation Logic ---
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('reveal-active');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.reveal-section').forEach(el => observer.observe(el));
+
+        // --- 2. Enhanced Particle System (Chaos vs Order) ---
+        const canvas = document.getElementById('mainCanvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let particles = [];
+        let mode = 'order'; // Default to order
+
+        // Color Palettes
+        const COLORS = {
+            chaos: {
+                particle: '#f43f5e', // Red
+                line: 'rgba(244, 63, 94, 0.4)',
+                bg: '#1a0505' // Dark Red BG for page
+            },
+            order: {
+                particle: '#22d3ee', // Cyan
+                line: 'rgba(34, 211, 238, 0.15)',
+                bg: '#020617' // Deep Blue BG for page
+            }
+        };
+
+        function initCanvas() {
+            // Get size of the container div, not window
+            const container = document.getElementById('viz-box');
+            width = canvas.width = container.offsetWidth;
+            height = canvas.height = container.offsetHeight;
+            createParticles();
+        }
+
+        function createParticles() {
+            particles = [];
+            // Grid settings for Order mode
+            const cols = 12;
+            const rows = 8;
+            const colSpacing = width / cols;
+            const rowSpacing = height / rows;
+
+            const count = 80; // Total particles
+
+            for (let i = 0; i < count; i++) {
+                // Target positions (Grid)
+                const col = i % cols;
+                const row = Math.floor(i / cols);
+                const tx = (col * colSpacing) + (colSpacing / 2);
+                const ty = (row * rowSpacing) + (rowSpacing / 2);
+
+                particles.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    vx: (Math.random() - 0.5) * 1,
+                    vy: (Math.random() - 0.5) * 1,
+                    targetX: tx,
+                    targetY: ty,
+                    size: Math.random() * 2 + 2,
+                    // Chaos specific props
+                    chaosVx: (Math.random() - 0.5) * 15, // High velocity
+                    chaosVy: (Math.random() - 0.5) * 15,
+                });
+            }
+        }
+
+        function updateParticles() {
+            // Clear with trail effect
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.3)'; // Space-900 with opacity
+            ctx.fillRect(0, 0, width, height);
+            
+            particles.forEach((p, index) => {
+                if (mode === 'chaos') {
+                    // --- CHAOS PHYSICS ---
+                    p.x += p.chaosVx;
+                    p.y += p.chaosVy;
+
+                    // Bounce off walls violently
+                    if (p.x < 0 || p.x > width) p.chaosVx *= -1;
+                    if (p.y < 0 || p.y > height) p.chaosVy *= -1;
+
+                    // Draw Particle
+                    ctx.fillStyle = COLORS.chaos.particle;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Draw Messy Connections (GOTO lines)
+                    particles.forEach((p2, i2) => {
+                        // Connect random distant particles (Spaghetti)
+                        const dist = Math.hypot(p.x - p2.x, p.y - p2.y);
+                        if (dist < 100 && Math.random() > 0.95) { 
+                            ctx.beginPath();
+                            ctx.strokeStyle = COLORS.chaos.line;
+                            ctx.lineWidth = 1;
+                            ctx.moveTo(p.x, p.y);
+                            ctx.lineTo(p2.x, p2.y);
+                            ctx.stroke();
+                        }
+                    });
+
+                } else {
+                    // --- ORDER PHYSICS ---
+                    // Move smoothly towards target grid position
+                    p.x += (p.targetX - p.x) * 0.05;
+                    p.y += (p.targetY - p.y) * 0.05;
+
+                    // Slight gentle wobble
+                    p.x += Math.sin(Date.now() * 0.001 + index) * 0.2;
+
+                    // Draw Particle
+                    ctx.fillStyle = COLORS.order.particle;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Draw Structured Connections (Grid lines)
+                    // Connect to right neighbor
+                    if ((index + 1) % 12 !== 0 && index + 1 < particles.length) {
+                        const right = particles[index+1];
+                        ctx.beginPath();
+                        ctx.strokeStyle = COLORS.order.line;
+                        ctx.lineWidth = 2;
+                        ctx.moveTo(p.x, p.y);
+                        ctx.lineTo(right.x, right.y);
+                        ctx.stroke();
+                    }
+                    // Connect to bottom neighbor
+                    if (index + 12 < particles.length) {
+                        const down = particles[index+12];
+                        ctx.beginPath();
+                        ctx.strokeStyle = COLORS.order.line;
+                        ctx.lineWidth = 2;
+                        ctx.moveTo(p.x, p.y);
+                        ctx.lineTo(down.x, down.y);
+                        ctx.stroke();
+                    }
+                }
+            });
+
+            requestAnimationFrame(updateParticles);
+        }
+
+        // --- 3. Control Logic ---
+        function triggerChaos() {
+            if (mode === 'chaos') return;
+            mode = 'chaos';
+            
+            // Update UI Text
+            const status = document.getElementById('viz-status');
+            status.innerText = "UNSTRUCTURED (CHAOS)";
+            status.className = "text-2xl font-bold text-neon-red drop-shadow-[0_0_10px_rgba(244,63,94,0.8)]";
+            
+            // Update Buttons
+            document.getElementById('btn-chaos').className = "flex-1 py-4 bg-slate-800 border-neon-red text-neon-red shadow-[0_0_15px_rgba(244,63,94,0.2)] rounded-lg text-xs font-bold transition-all uppercase tracking-wider";
+            document.getElementById('btn-order').className = "flex-1 py-4 bg-slate-800 border border-slate-700 hover:border-neon-blue text-slate-300 rounded-lg text-xs font-bold transition-all uppercase tracking-wider";
+
+            // Update Global Background
+            document.body.className = "antialiased selection:bg-neon-blue selection:text-space-950 state-chaos";
+            document.getElementById('viz-box').style.borderColor = '#f43f5e';
+            document.getElementById('viz-box').style.boxShadow = '0 0 30px rgba(244, 63, 94, 0.2)';
+            
+            // Update Hero Status
+            document.getElementById('status-dot').className = "w-2 h-2 rounded-full bg-neon-red animate-ping";
+            document.getElementById('system-text').innerText = "CRITICAL ERROR";
+            document.getElementById('system-text').className = "text-neon-red font-bold";
+        }
+
+        function triggerOrder() {
+            if (mode === 'order') return;
+            mode = 'order';
+
+            // Update UI Text
+            const status = document.getElementById('viz-status');
+            status.innerText = "STRUCTURED (ORDER)";
+            status.className = "text-2xl font-bold text-neon-blue drop-shadow-[0_0_10px_rgba(34,211,238,0.8)]";
+
+            // Update Buttons
+            document.getElementById('btn-order').className = "flex-1 py-4 bg-slate-800 border-neon-blue text-neon-blue shadow-[0_0_15px_rgba(34,211,238,0.2)] rounded-lg text-xs font-bold transition-all uppercase tracking-wider";
+            document.getElementById('btn-chaos').className = "flex-1 py-4 bg-slate-800 border border-slate-700 hover:border-neon-red text-slate-300 rounded-lg text-xs font-bold transition-all uppercase tracking-wider";
+
+            // Update Global Background
+            document.body.className = "antialiased selection:bg-neon-blue selection:text-space-950 state-order";
+            document.getElementById('viz-box').style.borderColor = '#22d3ee';
+            document.getElementById('viz-box').style.boxShadow = '0 0 30px rgba(34, 211, 238, 0.1)';
+
+            // Update Hero Status
+            document.getElementById('status-dot').className = "w-2 h-2 rounded-full bg-neon-blue animate-pulse";
+            document.getElementById('system-text').innerText = "Stable";
+            document.getElementById('system-text').className = "";
+        }
+
+        window.addEventListener('resize', initCanvas);
+        // Init
+        initCanvas();
+        updateParticles();
+        triggerOrder(); // Start clean
+
+        // --- 4. Chart Config ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const ctxGap = document.getElementById('gapChart').getContext('2d');
+            
+            const gradientChaos = ctxGap.createLinearGradient(0, 0, 0, 400);
+            gradientChaos.addColorStop(0, 'rgba(244, 63, 94, 0.5)');
+            gradientChaos.addColorStop(1, 'rgba(244, 63, 94, 0)');
+
+            const gradientOrder = ctxGap.createLinearGradient(0, 0, 0, 400);
+            gradientOrder.addColorStop(0, 'rgba(34, 211, 238, 0.5)');
+            gradientOrder.addColorStop(1, 'rgba(34, 211, 238, 0)');
+
+            new Chart(ctxGap, {
+                type: 'line',
+                data: {
+                    labels: ['Snippet', 'Function', 'Class', 'Module', 'System', 'Enterprise'],
+                    datasets: [{
+                        label: 'Chaos (Goto)',
+                        data: [5, 15, 45, 120, 300, 600],
+                        borderColor: '#f43f5e',
+                        backgroundColor: gradientChaos,
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true,
+                        pointBackgroundColor: '#f43f5e'
+                    }, {
+                        label: 'Order (Structured)',
+                        data: [5, 10, 18, 25, 35, 50],
+                        borderColor: '#22d3ee',
+                        backgroundColor: gradientOrder,
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true,
+                        pointBackgroundColor: '#22d3ee'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#94a3b8', font: { family: 'Inter' } } }
+                    },
+                    scales: {
+                        y: {
+                            grid: { color: '#1e293b' },
+                            ticks: { color: '#64748b' }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#64748b' }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
