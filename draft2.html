@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Go To Considered Harmful | Immersive Research</title>
+    
+    <!-- Chosen Palette: "Deep Space & Neon" 
+         Background: Slate-950 (Deepest Blue-Grey) -> Adds depth without the harshness of pure black.
+         Text: Slate-200 (Soft White) -> Reduces eye strain.
+         Primary Accent: Cyan-400 (Electric Blue) -> Represents "Structure" and "Logic".
+         Secondary Accent: Rose-500 (Neon Red) -> Represents "Chaos" and "Error".
+         Tertiary: Violet-600 (Deep Purple) -> Used for gradients and depth.
+    -->
+    
+    <!-- Application Structure Plan: 
+        1. Cinematic Hero: Full-screen height with animated glowing background canvas. Title uses gradient text.
+        2. Glassmorphism UI: Content cards use semi-transparent backgrounds with blur filters, floating above the dark background.
+        3. Interactive Storytelling:
+           - "The Chaos Engine": Background canvas reacts to scroll or mouse.
+           - "The Rift" (Chart): A glowing line chart showing the divergence of complexity.
+           - "The Editor": A UI mimicking a modern code editor (VS Code style) for the refactoring lab.
+        4. Typography: High-contrast Serif for headings (Academic authority) + Geometric Sans for body (Modern readability).
+    -->
+    
+    <!-- Visualization & Content Choices:
+        - Background Canvas: Constantly animating network of nodes. "Chaos" mode makes them jittery; "Order" aligns them.
+        - Glowing Charts: Chart.js configured with specific hex codes to appear "luminescent" against dark backgrounds.
+        - Code Diff: Styled like a modern IDE (dark theme syntax highlighting).
+    -->
+
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Cinzel', 'serif'], // More dramatic, cinematic serif
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        space: {
+                            950: '#020617', // Deepest slate
+                            900: '#0f172a',
+                            800: '#1e293b',
+                        },
+                        neon: {
+                            blue: '#22d3ee', // Cyan-400
+                            purple: '#8b5cf6', // Violet-500
+                            red: '#f43f5e',   // Rose-500
+                            green: '#34d399'  // Emerald-400
+                        }
+                    },
+                    backgroundImage: {
+                        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+                        'hero-glow': 'conic-gradient(from 90deg at 50% 50%, #0f172a 0%, #1e293b 50%, #0f172a 100%)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #020617; color: #e2e8f0; overflow-x: hidden; }
+        
+        /* Glassmorphism Classes */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.4);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        }
+        
+        .glass-nav {
+            background: rgba(2, 6, 23, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Text Gradients */
+        .text-gradient {
+            background: linear-gradient(to right, #22d3ee, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .text-gradient-danger {
+            background: linear-gradient(to right, #f43f5e, #fb923c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Animations */
+        .float-anim { animation: float 6s ease-in-out infinite; }
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+            100% { transform: translateY(0px); }
+        }
+
+        .reveal-section { opacity: 0; transform: translateY(40px); transition: all 1s cubic-bezier(0.16, 1, 0.3, 1); }
+        .reveal-active { opacity: 1; transform: translateY(0); }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; background: #020617; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        /* IDE Styles */
+        .ide-window { border-radius: 8px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.5); font-size: 13px; }
+        .ide-header { background: #0f172a; padding: 10px 16px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #1e293b; }
+        .ide-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .ide-content { background: #020617; padding: 20px; font-family: 'JetBrains Mono', monospace; line-height: 1.6; }
+    </style>
+</head>
+<body class="antialiased selection:bg-neon-blue selection:text-space-950">
+
+    <!-- Animated Background Canvas (Fixed) -->
+    <canvas id="bgCanvas" class="fixed top-0 left-0 w-full h-full pointer-events-none z-0 opacity-40"></canvas>
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full z-50 glass-nav transition-all duration-300" id="navbar">
+        <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-2 h-8 bg-gradient-to-b from-neon-blue to-neon-purple rounded-full"></div>
+                <span class="font-serif text-xl tracking-wider text-slate-100">RaSor <span class="text-slate-500">//</span> Research</span>
+            </div>
+            
+            <div class="hidden md:flex items-center gap-8 text-sm font-medium tracking-wide text-slate-400">
+                <a href="#hero" class="hover:text-neon-blue transition-colors">Analysis</a>
+                <a href="#gap" class="hover:text-neon-blue transition-colors">The Gap</a>
+                <a href="#lab" class="hover:text-neon-blue transition-colors">Code Lab</a>
+                <a href="#legacy" class="hover:text-neon-blue transition-colors">Legacy</a>
+            </div>
+
+            <a href="#lab" class="group relative px-6 py-2 overflow-hidden rounded-full bg-slate-800 text-white shadow-lg ring-1 ring-white/10 hover:ring-neon-blue transition-all">
+                <span class="absolute inset-0 w-full h-full bg-gradient-to-r from-neon-blue to-neon-purple opacity-0 group-hover:opacity-20 transition-opacity"></span>
+                <span class="relative text-xs font-bold uppercase tracking-widest">Interactive Demo</span>
+            </a>
+        </div>
+    </nav>
+
+    <main class="relative z-10">
+        
+        <!-- Hero Section -->
+        <section id="hero" class="min-h-screen flex flex-col justify-center items-center px-6 pt-20 relative overflow-hidden">
+            <!-- Abstract Glowing Orb behind text -->
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-neon-purple rounded-full mix-blend-screen filter blur-[120px] opacity-20 animate-pulse"></div>
+            
+            <div class="text-center max-w-5xl mx-auto relative z-10 float-anim">
+                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900/50 border border-slate-700/50 backdrop-blur-md mb-8">
+                    <span class="w-2 h-2 rounded-full bg-neon-red animate-ping"></span>
+                    <span class="text-xs font-mono text-neon-red uppercase tracking-widest">Critical Analysis Draft</span>
+                </div>
+                
+                <h1 class="text-6xl md:text-8xl font-serif font-bold leading-tight mb-6">
+                    Go To Statement<br>
+                    <span class="text-gradient-danger">Considered Harmful</span>
+                </h1>
+                
+                <p class="text-xl md:text-2xl text-slate-400 max-w-3xl mx-auto leading-relaxed font-light">
+                    Edsger W. Dijkstra's 1968 manifesto wasn't just about code style. It was a plea for <span class="text-neon-blue font-medium">intellectual manageability</span> in an era of chaos.
+                </p>
+
+                <div class="mt-12 flex flex-col md:flex-row gap-6 justify-center items-center">
+                    <button onclick="scrollToSection('chaos-demo')" class="px-8 py-4 bg-slate-100 text-space-950 rounded-full font-bold text-sm uppercase tracking-widest hover:bg-neon-blue hover:scale-105 transition-all shadow-[0_0_20px_rgba(34,211,238,0.3)]">
+                        Visualize The Chaos
+                    </button>
+                    <div class="text-slate-500 text-xs font-mono flex items-center gap-2">
+                        <span class="w-4 h-[1px] bg-slate-600"></span> SCROLL TO EXPLORE <span class="w-4 h-[1px] bg-slate-600"></span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- The "Chaos" Demo Section -->
+        <section id="chaos-demo" class="py-32 px-6 relative">
+            <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                <div class="reveal-section">
+                    <h2 class="text-neon-red font-mono text-sm tracking-widest mb-4">// THE PROBLEM</h2>
+                    <h3 class="text-4xl md:text-5xl font-serif font-bold text-white mb-6">The Unbridled Jump</h3>
+                    <div class="prose prose-invert prose-lg text-slate-400">
+                        <p>
+                            When a program uses <code class="text-neon-red bg-slate-900 px-2 py-1 rounded border border-slate-800">GOTO</code>, the execution pointer can teleport anywhere. This creates "Spaghetti Code."
+                        </p>
+                        <p>
+                            Interact with the panel to see how Dijkstra visualized the difference between a <strong>random process</strong> (unverifiable) and a <strong>structured process</strong> (provable).
+                        </p>
+                    </div>
+                    
+                    <div class="mt-10 flex gap-4">
+                        <div class="flex items-center gap-3 text-sm text-slate-300">
+                            <div class="w-3 h-3 rounded-full bg-neon-red"></div> Chaos
+                        </div>
+                        <div class="flex items-center gap-3 text-sm text-slate-300">
+                            <div class="w-3 h-3 rounded-full bg-neon-blue"></div> Structure
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Interactive Control Panel -->
+                <div class="glass-panel p-8 rounded-2xl reveal-section delay-200 relative overflow-hidden group">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-neon-red to-transparent opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                    
+                    <div class="flex justify-between items-end mb-8">
+                        <div>
+                            <div class="text-xs text-slate-500 font-mono mb-1">VISUALIZATION MODE</div>
+                            <div id="viz-status" class="text-2xl font-bold text-white">Awaiting Input...</div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="triggerChaos()" class="px-4 py-2 bg-slate-800 hover:bg-neon-red hover:text-white border border-slate-700 text-slate-300 rounded-lg text-xs font-bold transition-all uppercase">
+                                Inject Chaos
+                            </button>
+                            <button onclick="triggerOrder()" class="px-4 py-2 bg-slate-800 hover:bg-neon-blue hover:text-space-950 border border-slate-700 text-slate-300 rounded-lg text-xs font-bold transition-all uppercase">
+                                Restore Order
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Mini Canvas for Local Demo -->
+                    <div class="h-64 w-full bg-space-900 rounded-lg border border-slate-800 relative overflow-hidden">
+                        <div id="demo-particles" class="absolute inset-0"></div>
+                        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <span class="text-slate-700 font-mono text-xs">Render Target: HTML5 Canvas</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- The Gap Chart Section -->
+        <section id="gap" class="py-32 px-6 bg-space-900/50 relative border-y border-slate-800/50">
+            <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5"></div>
+            
+            <div class="max-w-5xl mx-auto text-center mb-16 reveal-section">
+                <h2 class="text-neon-blue font-mono text-sm tracking-widest mb-4">// THE COGNITIVE GAP</h2>
+                <h3 class="text-4xl md:text-5xl font-serif font-bold text-white mb-6">Static Text vs. Dynamic Process</h3>
+                <p class="text-slate-400 max-w-2xl mx-auto">
+                    Dijkstra argued that as programs grow, the mental effort required to trace <span class="text-neon-red">unstructured</span> code grows exponentially compared to <span class="text-neon-blue">structured</span> code.
+                </p>
+            </div>
+
+            <div class="max-w-4xl mx-auto h-[400px] glass-panel p-4 rounded-xl reveal-section">
+                <canvas id="gapChart"></canvas>
+            </div>
+        </section>
+
+        <!-- Code Refactoring Lab -->
+        <section id="lab" class="py-32 px-6">
+            <div class="max-w-7xl mx-auto">
+                <div class="flex flex-col md:flex-row justify-between items-end mb-12 reveal-section">
+                    <div>
+                        <h2 class="text-neon-purple font-mono text-sm tracking-widest mb-4">// REFACTORING LAB</h2>
+                        <h3 class="text-4xl font-serif font-bold text-white">From Mess to Clarity</h3>
+                    </div>
+                    <p class="text-slate-400 text-sm max-w-xs mt-4 md:mt-0 text-right">
+                        Compare the readability. The logic is identical, but the cognitive load is vastly different.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    
+                    <!-- Editor 1: Bad Code -->
+                    <div class="ide-window reveal-section delay-100 border border-slate-800 group hover:border-neon-red transition-colors duration-500">
+                        <div class="ide-header">
+                            <div class="ide-dot bg-red-500"></div>
+                            <div class="ide-dot bg-yellow-500"></div>
+                            <div class="ide-dot bg-green-500"></div>
+                            <span class="ml-4 text-slate-500 font-mono text-xs">legacy_script.c</span>
+                            <span class="ml-auto text-neon-red text-[10px] uppercase border border-neon-red/30 px-2 py-0.5 rounded">Unsafe</span>
+                        </div>
+                        <div class="ide-content text-slate-300">
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">1</span><span><span class="text-neon-purple">int</span> i = 0;</span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">2</span><span><span class="text-yellow-400 font-bold">START:</span></span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">3</span><span>  <span class="text-neon-purple">if</span> (i > 10) <span class="text-neon-red">goto</span> <span class="text-yellow-400">END</span>;</span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">4</span><span>  <span class="text-neon-purple">if</span> (check(i)) <span class="text-neon-red">goto</span> <span class="text-yellow-400">ACTION</span>;</span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">5</span><span>  i++;</span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">6</span><span>  <span class="text-neon-red">goto</span> <span class="text-yellow-400">START</span>;</span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">7</span><span><span class="text-yellow-400 font-bold">ACTION:</span></span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">8</span><span>  process(i);</span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">9</span><span>  <span class="text-neon-red">goto</span> <span class="text-yellow-400">START</span>;</span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">10</span><span><span class="text-yellow-400 font-bold">END:</span></span></div>
+                        </div>
+                    </div>
+
+                    <!-- Editor 2: Good Code -->
+                    <div class="ide-window reveal-section delay-200 border border-slate-800 group hover:border-neon-blue transition-colors duration-500 shadow-[0_0_30px_rgba(34,211,238,0.05)]">
+                        <div class="ide-header">
+                            <div class="ide-dot bg-red-500"></div>
+                            <div class="ide-dot bg-yellow-500"></div>
+                            <div class="ide-dot bg-green-500"></div>
+                            <span class="ml-4 text-slate-500 font-mono text-xs">modern_refactor.js</span>
+                            <span class="ml-auto text-neon-blue text-[10px] uppercase border border-neon-blue/30 px-2 py-0.5 rounded">Optimized</span>
+                        </div>
+                        <div class="ide-content text-slate-300">
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">1</span><span><span class="text-slate-500 italic">// Structured flow is verifiable</span></span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">2</span><span><span class="text-neon-purple">for</span> (<span class="text-neon-purple">let</span> i = 0; i <= 10; i++) {</span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">3</span><span></span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">4</span><span>  <span class="text-neon-purple">if</span> (check(i)) {</span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">5</span><span>    process(i);</span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">6</span><span>  }</span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">7</span><span></span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">8</span><span>}</span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">9</span><span></span></div>
+                            <div class="flex"><span class="text-slate-600 w-8 select-none">10</span><span>console.log(<span class="text-neon-green">"Done"</span>);</span></div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- Legacy Timeline Cards -->
+        <section id="legacy" class="py-32 px-6 bg-gradient-to-t from-space-950 to-space-900">
+            <div class="max-w-6xl mx-auto">
+                <div class="text-center mb-16 reveal-section">
+                    <h2 class="text-neon-green font-mono text-sm tracking-widest mb-4">// HISTORICAL IMPACT</h2>
+                    <h3 class="text-4xl font-serif font-bold text-white">The Aftermath</h3>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="glass-panel p-8 rounded-xl hover:bg-slate-800/50 transition-colors reveal-section delay-100">
+                        <div class="text-4xl font-bold text-slate-700 mb-4">1968</div>
+                        <h4 class="text-xl font-bold text-white mb-2">The Letter</h4>
+                        <p class="text-slate-400 text-sm leading-relaxed">Published in the ACM, creating a firestorm of debate. Programmers felt their creativity was being attacked.</p>
+                    </div>
+                    <div class="glass-panel p-8 rounded-xl hover:bg-slate-800/50 transition-colors reveal-section delay-200">
+                        <div class="text-4xl font-bold text-slate-700 mb-4">1972</div>
+                        <h4 class="text-xl font-bold text-white mb-2">C Language</h4>
+                        <p class="text-slate-400 text-sm leading-relaxed">Dennis Ritchie includes `goto` in C, but structured constructs (`for`, `while`, `switch`) become the primary tools.</p>
+                    </div>
+                    <div class="glass-panel p-8 rounded-xl hover:bg-slate-800/50 transition-colors reveal-section delay-300 border-b-4 border-neon-blue">
+                        <div class="text-4xl font-bold text-slate-700 mb-4">Today</div>
+                        <h4 class="text-xl font-bold text-white mb-2">Modern Era</h4>
+                        <p class="text-slate-400 text-sm leading-relaxed">Languages like Java and Python omit standard `goto` entirely. Dijkstra's vision of structured quality is the global standard.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="py-12 text-center border-t border-slate-800 bg-space-950 relative z-10">
+        <p class="font-serif text-lg text-slate-500 italic">"Elegance is not a optional luxury but a matter of life and death."</p>
+        <div class="mt-4 text-xs text-slate-700 uppercase tracking-widest font-mono">RaSor Research Group &copy; 2025</div>
+    </footer>
+
+    <script>
+        // --- 1. Reveal Animation Logic ---
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('reveal-active');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.reveal-section').forEach(el => observer.observe(el));
+
+        function scrollToSection(id) {
+            document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // --- 2. Background Particle System (The "Chaos Engine") ---
+        const canvas = document.getElementById('bgCanvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let particles = [];
+        let mode = 'chaos'; // 'chaos' or 'order'
+
+        function initCanvas() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            createParticles();
+        }
+
+        function createParticles() {
+            particles = [];
+            const count = width < 768 ? 30 : 60;
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    vx: (Math.random() - 0.5) * 2, // High velocity for chaos
+                    vy: (Math.random() - 0.5) * 2,
+                    targetX: null, // For order mode
+                    targetY: null,
+                    size: Math.random() * 2 + 1,
+                    color: Math.random() > 0.5 ? '#f43f5e' : '#22d3ee' // Red or Blue
+                });
+            }
+        }
+
+        function updateParticles() {
+            ctx.clearRect(0, 0, width, height);
+            
+            particles.forEach((p, index) => {
+                // Physics
+                if (mode === 'chaos') {
+                    p.x += p.vx;
+                    p.y += p.vy;
+
+                    // Bounce off walls
+                    if (p.x < 0 || p.x > width) p.vx *= -1;
+                    if (p.y < 0 || p.y > height) p.vy *= -1;
+                } else {
+                    // Move to structured grid
+                    if (!p.targetX) {
+                        // Assign a grid position
+                        const cols = 10;
+                        const col = index % cols;
+                        const row = Math.floor(index / cols);
+                        p.targetX = (width / cols) * col + (width/cols)/2;
+                        p.targetY = (height / (particles.length/cols)) * row + 100;
+                    }
+                    // Smooth easing to target
+                    p.x += (p.targetX - p.x) * 0.05;
+                    p.y += (p.targetY - p.y) * 0.05;
+                }
+
+                // Draw Particle
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fillStyle = mode === 'chaos' ? p.color : '#22d3ee'; // All turn blue in order
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = ctx.fillStyle;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                // Draw Connections
+                particles.forEach((p2, i2) => {
+                    if (index === i2) return;
+                    const dist = Math.hypot(p.x - p2.x, p.y - p2.y);
+                    
+                    // Chaos Mode: Connect random close neighbors with red
+                    if (mode === 'chaos' && dist < 150) {
+                        ctx.beginPath();
+                        ctx.strokeStyle = `rgba(244, 63, 94, ${1 - dist/150})`; // Red fade
+                        ctx.lineWidth = 0.5;
+                        ctx.moveTo(p.x, p.y);
+                        ctx.lineTo(p2.x, p2.y);
+                        ctx.stroke();
+                    }
+                    // Order Mode: Connect sequence (mock) with blue
+                    else if (mode === 'order' && Math.abs(index - i2) === 1 && index % 10 !== 9) {
+                         // Simple sequential connections
+                         ctx.beginPath();
+                         ctx.strokeStyle = `rgba(34, 211, 238, 0.3)`; // Blue
+                         ctx.lineWidth = 1;
+                         ctx.moveTo(p.x, p.y);
+                         ctx.lineTo(p2.x, p2.y);
+                         ctx.stroke();
+                    }
+                });
+            });
+
+            requestAnimationFrame(updateParticles);
+        }
+
+        // --- 3. Interaction Triggers ---
+        function triggerChaos() {
+            mode = 'chaos';
+            document.getElementById('viz-status').innerText = "Mode: UNSTRUCTURED";
+            document.getElementById('viz-status').className = "text-2xl font-bold text-neon-red drop-shadow-[0_0_10px_rgba(244,63,94,0.8)]";
+            // Randomize velocities again
+            particles.forEach(p => {
+                p.vx = (Math.random() - 0.5) * 4;
+                p.vy = (Math.random() - 0.5) * 4;
+                p.targetX = null;
+            });
+        }
+
+        function triggerOrder() {
+            mode = 'order';
+            document.getElementById('viz-status').innerText = "Mode: STRUCTURED";
+            document.getElementById('viz-status').className = "text-2xl font-bold text-neon-blue drop-shadow-[0_0_10px_rgba(34,211,238,0.8)]";
+        }
+
+        window.addEventListener('resize', initCanvas);
+        initCanvas();
+        updateParticles();
+        
+        // Default start state
+        triggerChaos();
+
+        // --- 4. Glowing Chart Config ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const ctxGap = document.getElementById('gapChart').getContext('2d');
+            
+            // Gradient for line fill
+            const gradientChaos = ctxGap.createLinearGradient(0, 0, 0, 400);
+            gradientChaos.addColorStop(0, 'rgba(244, 63, 94, 0.5)');
+            gradientChaos.addColorStop(1, 'rgba(244, 63, 94, 0)');
+
+            const gradientOrder = ctxGap.createLinearGradient(0, 0, 0, 400);
+            gradientOrder.addColorStop(0, 'rgba(34, 211, 238, 0.5)');
+            gradientOrder.addColorStop(1, 'rgba(34, 211, 238, 0)');
+
+            new Chart(ctxGap, {
+                type: 'line',
+                data: {
+                    labels: ['Snippet', 'Function', 'Class', 'Module', 'System', 'Enterprise'],
+                    datasets: [{
+                        label: 'Chaos (Goto)',
+                        data: [5, 15, 45, 120, 300, 600],
+                        borderColor: '#f43f5e',
+                        backgroundColor: gradientChaos,
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true,
+                        pointBackgroundColor: '#f43f5e',
+                        pointShadowColor: '#f43f5e',
+                        pointShadowBlur: 10
+                    }, {
+                        label: 'Order (Structured)',
+                        data: [5, 10, 18, 25, 35, 50],
+                        borderColor: '#22d3ee',
+                        backgroundColor: gradientOrder,
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true,
+                        pointBackgroundColor: '#22d3ee'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#94a3b8', font: { family: 'Inter' } } }
+                    },
+                    scales: {
+                        y: {
+                            grid: { color: '#1e293b' },
+                            ticks: { color: '#64748b' }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#64748b' }
+                        }
+                    },
+                    elements: {
+                        point: { radius: 4, hoverRadius: 7 }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
